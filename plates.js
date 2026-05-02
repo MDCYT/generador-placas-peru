@@ -474,46 +474,47 @@ function drawHologram(ctx, x, y, w, h, codigo) {
   ctx.fillText(codigo.replace('-', ''), x + w / 2, y + h / 2 + 1);
 }
 
-function drawQr(ctx, x, y, size, seedText) {
-  const cells = 25;
-  const cell = size / cells;
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(x, y, size, size);
-
-  const seed = seedText.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const drawFinder = (fx, fy) => {
-    ctx.fillStyle = '#050505';
-    ctx.fillRect(x + fx * cell, y + fy * cell, cell * 7, cell * 7);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(x + (fx + 1) * cell, y + (fy + 1) * cell, cell * 5, cell * 5);
-    ctx.fillStyle = '#050505';
-    ctx.fillRect(x + (fx + 2) * cell, y + (fy + 2) * cell, cell * 3, cell * 3);
-  };
-
-  drawFinder(0, 0);
-  drawFinder(cells - 7, 0);
-  drawFinder(0, cells - 7);
-
-  ctx.fillStyle = '#101010';
-  for (let row = 0; row < cells; row++) {
-    for (let col = 0; col < cells; col++) {
-      const inFinder =
-        (row < 8 && col < 8) ||
-        (row < 8 && col > cells - 9) ||
-        (row > cells - 9 && col < 8);
-      if (inFinder) continue;
-
-      const timing = (row === 6 || col === 6) && (row + col) % 2 === 0;
-      const data = ((row * 17 + col * 23 + seed) % 7 < 3) || ((row ^ col ^ seed) % 11 === 0);
-      if (timing || data) ctx.fillRect(x + col * cell, y + row * cell, Math.ceil(cell), Math.ceil(cell));
+async function drawQr(ctx, x, y, size, seedText) {
+  return new Promise((resolve) => {
+    if (typeof QRCode === 'undefined') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, size, size);
+      ctx.strokeStyle = '#d9dde6';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, size, size);
+      resolve();
+      return;
     }
-  }
 
-  ctx.fillStyle = '#30a8d6';
-  ctx.fillRect(x + cell * 12, y + cell * 12, cell * 2, cell * 2);
-  ctx.strokeStyle = '#d9dde6';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(x, y, size, size);
+    const qrData = 'https://verificacion.placas.pe/v?code=' + seedText.replace('-', '') + '&date=' + Date.now();
+    
+    try {
+      const qrCanvas = document.createElement('canvas');
+      QRCode.toCanvas(qrCanvas, qrData, { 
+        width: size * 2, 
+        margin: 0, 
+        color: { dark: '#050505', light: '#ffffff' } 
+      }, (error) => {
+        if (!error) {
+          ctx.drawImage(qrCanvas, x, y, size, size);
+        } else {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(x, y, size, size);
+          ctx.strokeStyle = '#d9dde6';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, size, size);
+        }
+        resolve();
+      });
+    } catch (e) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, size, size);
+      ctx.strokeStyle = '#d9dde6';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x, y, size, size);
+      resolve();
+    }
+  });
 }
 
 function drawCode(ctx, codigo, cfg, x, y, maxWidth, fontSize, special, verticalScale = 1) {
@@ -568,7 +569,7 @@ function drawMinorCode(ctx, codigo, cfg, x, y, maxWidth) {
   ctx.shadowOffsetY = 0;
 }
 
-function dibujarPlacaMenor(canvasEl, codigo, cfg) {
+async function dibujarPlacaMenor(canvasEl, codigo, cfg) {
   const ctx = canvasEl.getContext('2d');
   const W = 620;
   const H = 540;
@@ -618,12 +619,12 @@ function dibujarPlacaMenor(canvasEl, codigo, cfg) {
   ctx.stroke();
 
   drawHologram(ctx, plateX + 46, plateY + 196, 72, 38, codigo);
-  drawQr(ctx, plateX + 58, plateY + 244, 54, codigo);
+  await drawQr(ctx, plateX + 58, plateY + 244, 54, codigo);
 
   ctx.fillStyle = '#0b0b0b';
   ctx.font = '700 14px "Barlow Condensed", sans-serif';
   ctx.textAlign = 'left';
-  ctx.fillText(`PE${pad(Math.floor(Math.random() * 1000000), 7)}`, plateX + 42, plateY + plateH - 35);
+  ctx.fillText('PE' + pad(Math.floor(Math.random() * 1000000), 7), plateX + 42, plateY + plateH - 35);
 
   drawSlot(ctx, plateX + 142, plateY + 28);
   drawSlot(ctx, plateX + 332, plateY + 28);
@@ -635,11 +636,11 @@ function dibujarPlacaMenor(canvasEl, codigo, cfg) {
   ctx.stroke();
 }
 
-function dibujarPlaca(canvasEl, codigo, cfg) {
+async function dibujarPlaca(canvasEl, codigo, cfg) {
   const ctx = canvasEl.getContext('2d');
   const isMoto = cfg.formato === 'moto';
   if (isMoto) {
-    dibujarPlacaMenor(canvasEl, codigo, cfg);
+    await dibujarPlacaMenor(canvasEl, codigo, cfg);
     return;
   }
 
@@ -742,7 +743,7 @@ function syncUi() {
   infoText.textContent = cfg.info;
 }
 
-function generar({ forceRandom = false } = {}) {
+async function generar({ forceRandom = false } = {}) {
   const cfg = getActiveConfig();
   let codigo = null;
 
@@ -761,7 +762,7 @@ function generar({ forceRandom = false } = {}) {
   if (!codigo) codigo = generarCodigo(estado.tipo, estado.zona);
   estado.codigoGenerado = codigo;
 
-  dibujarPlaca(canvas, codigo, cfg);
+  await dibujarPlaca(canvas, codigo, cfg);
   metaCodigo.textContent = codigo;
   syncUi();
 }
@@ -814,7 +815,7 @@ async function exportCurrentPlate() {
   }
 }
 
-function makeBatchItem(index) {
+async function makeBatchItem(index) {
   const cfg = getActiveConfig();
   const previousManual = estado.codigoManual;
   estado.codigoManual = '';
@@ -822,7 +823,7 @@ function makeBatchItem(index) {
   estado.codigoManual = previousManual;
 
   const tempCanvas = document.createElement('canvas');
-  dibujarPlaca(tempCanvas, codigo, cfg);
+  await dibujarPlaca(tempCanvas, codigo, cfg);
   return {
     id: index + 1,
     codigo,
@@ -832,12 +833,12 @@ function makeBatchItem(index) {
   };
 }
 
-function generarLote() {
+async function generarLote() {
   const countInput = document.getElementById('batch-count');
   const count = Math.max(2, Math.min(24, Number(countInput.value) || 6));
   countInput.value = count;
 
-  const items = Array.from({ length: count }, (_, index) => makeBatchItem(index));
+  const items = await Promise.all(Array.from({ length: count }, (_, index) => makeBatchItem(index)));
   batchGrid.innerHTML = items.map((item) => `
     <article class="batch-card">
       <img src="${item.dataUrl}" alt="Placa ${item.codigo}">
@@ -857,7 +858,7 @@ function generarLote() {
 function generarAleatorio() {
   customInput.value = '';
   estado.codigoManual = '';
-  generar({ forceRandom: true });
+  generar({ forceRandom: true }).catch(() => {});
 }
 
 tipoGrid.addEventListener('click', (event) => {
@@ -865,17 +866,17 @@ tipoGrid.addEventListener('click', (event) => {
   if (!button) return;
   estado.tipo = button.dataset.tipo;
   renderTypeButtons();
-  generar();
+  generar().catch(() => {});
 });
 
 document.getElementById('zona-select').addEventListener('change', (event) => {
   estado.zona = event.target.value;
-  generar();
+  generar().catch(() => {});
 });
 
 subtipoSelect.addEventListener('change', (event) => {
   estado.subtipo = event.target.value;
-  generar();
+  generar().catch(() => {});
 });
 
 customInput.addEventListener('input', (event) => {
@@ -884,10 +885,10 @@ customInput.addEventListener('input', (event) => {
 });
 
 customInput.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') generar();
+  if (event.key === 'Enter') generar().catch(() => {});
 });
 
-document.getElementById('generar-btn').addEventListener('click', () => generar());
+document.getElementById('generar-btn').addEventListener('click', () => generar().catch(() => {}));
 document.getElementById('random-btn').addEventListener('click', generarAleatorio);
 document.getElementById('nuevo-btn').addEventListener('click', generarAleatorio);
 document.getElementById('export-code-btn').addEventListener('click', exportCurrentPlate);
@@ -921,23 +922,23 @@ batchGrid.addEventListener('click', async (event) => {
 
 document.getElementById('custom-bg').addEventListener('input', (event) => {
   estado.custom.fondo = event.target.value;
-  generar();
+  generar().catch(() => {});
 });
 document.getElementById('custom-text').addEventListener('input', (event) => {
   estado.custom.texto = event.target.value;
-  generar();
+  generar().catch(() => {});
 });
 document.getElementById('custom-border').addEventListener('input', (event) => {
   estado.custom.borde = event.target.value;
-  generar();
+  generar().catch(() => {});
 });
 document.getElementById('custom-band').addEventListener('input', (event) => {
   estado.custom.header = event.target.value;
-  generar();
+  generar().catch(() => {});
 });
 document.getElementById('custom-band-enabled').addEventListener('change', (event) => {
   estado.custom.bandEnabled = event.target.checked;
-  generar();
+  generar().catch(() => {});
 });
 
 document.getElementById('download-btn').addEventListener('click', () => {
@@ -958,4 +959,11 @@ document.getElementById('copy-btn').addEventListener('click', async () => {
 
 renderTypeButtons();
 renderSubtypes();
-document.fonts.ready.then(() => generar());
+document.fonts.ready.then(() => {
+  if (typeof QRCode === 'undefined') {
+    console.warn('QRCode library not loaded yet, retrying...');
+    setTimeout(() => generar(), 500);
+  } else {
+    generar();
+  }
+});
