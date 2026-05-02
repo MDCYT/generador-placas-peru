@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de Placas Peruanas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">PE</div>
+      <div>
+        <h1>PlacaGen PE</h1>
+        <p>Generador visual de placas peruanas</p>
+      </div>
+    </div>
+    <a class="source-link" href="https://www.placas.pe/#/home/orientacion" target="_blank" rel="noreferrer">Referencia placas.pe</a>
+  </header>
+
+  <main class="app-shell">
+    <section class="workspace">
+      <div class="preview-header">
+        <div>
+          <span class="eyebrow">Vista previa</span>
+          <h2 id="preview-title">Placa particular</h2>
+        </div>
+        <div class="plate-code-pill" id="meta-codigo">---</div>
+      </div>
+
+      <div class="plate-stage">
+        <div id="plate-wrap">
+          <canvas id="plate-canvas" width="900" height="460"></canvas>
+        </div>
+      </div>
+
+      <div class="plate-meta" id="plate-meta">
+        <div>
+          <span>Tipo</span>
+          <strong id="meta-tipo">Particular</strong>
+        </div>
+        <div>
+          <span>Zona</span>
+          <strong id="meta-zona">Lima y Callao</strong>
+        </div>
+        <div>
+          <span>Formato</span>
+          <strong id="meta-formato">ABC-123</strong>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="download-btn" class="icon-btn primary" type="button" title="Descargar PNG" aria-label="Descargar PNG">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
+          Descargar PNG
+        </button>
+        <button id="copy-btn" class="icon-btn" type="button" title="Copiar codigo" aria-label="Copiar codigo">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copiar codigo
+        </button>
+        <button id="nuevo-btn" class="icon-btn" type="button" title="Nueva placa" aria-label="Nueva placa">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          Nueva
+        </button>
+        <button id="export-code-btn" class="icon-btn" type="button" title="Exportar codigo" aria-label="Exportar codigo">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+          Exportar JSON
+        </button>
+      </div>
+
+      <p class="info-box" id="info-text">Placa blanca sin franja para vehiculos particulares.</p>
+    </section>
+
+    <aside class="controls-panel">
+      <div class="panel-section">
+        <div class="section-title">
+          <span>Tipo de placa</span>
+          <button id="random-btn" class="mini-btn" type="button">Aleatoria</button>
+        </div>
+        <div class="type-grid" id="tipo-grid"></div>
+      </div>
+
+      <div class="panel-section" id="zona-field">
+        <label for="zona-select">Zona registral</label>
+        <select id="zona-select">
+          <option value="A">Lima y Callao (A, B, C, D, F)</option>
+          <option value="P">Tumbes / Piura (P)</option>
+          <option value="M">Amazonas / Cajamarca / Lambayeque (M, K)</option>
+          <option value="T">La Libertad (T)</option>
+          <option value="H">Ancash (H)</option>
+          <option value="W">Huanuco / Junin / Pasco (W)</option>
+          <option value="S">San Martin (S)</option>
+          <option value="L">Loreto (L)</option>
+          <option value="U">Ucayali (U)</option>
+          <option value="V">Arequipa (V)</option>
+          <option value="X">Apurimac / Cusco / Madre de Dios (X)</option>
+          <option value="Y">Ayacucho / Ica / Huancavelica (Y)</option>
+          <option value="Z">Moquegua / Puno / Tacna (Z)</option>
+        </select>
+      </div>
+
+      <div class="panel-section" id="subtipo-field">
+        <label for="subtipo-select">Subtipo especial</label>
+        <select id="subtipo-select"></select>
+      </div>
+
+      <div class="panel-section">
+        <label for="custom-code">Codigo</label>
+        <div class="code-row">
+          <input type="text" id="custom-code" placeholder="Ej: A1B-234" maxlength="8" autocomplete="off" spellcheck="false" />
+          <button id="generar-btn" type="button">Generar</button>
+        </div>
+      </div>
+
+      <div class="panel-section custom-panel hidden" id="custom-panel">
+        <div class="section-title">
+          <span>Personalizada</span>
+        </div>
+        <div class="color-grid">
+          <label>Fondo <input type="color" id="custom-bg" value="#ffffff"></label>
+          <label>Texto <input type="color" id="custom-text" value="#000000"></label>
+          <label>Borde <input type="color" id="custom-border" value="#111111"></label>
+          <label>Franja <input type="color" id="custom-band" value="#8a008a"></label>
+        </div>
+        <label class="toggle-row"><input type="checkbox" id="custom-band-enabled" checked> Mostrar franja superior</label>
+      </div>
+
+      <div class="panel-section">
+        <div class="section-title">
+          <span>Multiples placas</span>
+        </div>
+        <div class="batch-row">
+          <input type="number" id="batch-count" min="2" max="24" value="6" />
+          <button id="batch-btn" type="button">Generar lote</button>
+        </div>
+      </div>
+
+      <div class="reference-strip">
+        <strong>Formatos</strong>
+        <span>Liviano: ABC-123</span>
+        <span>Moto: AB-1234</span>
+        <span>Especial: EZA-123</span>
+      </div>
+    </aside>
+  </main>
+
+  <section class="batch-panel hidden" id="batch-panel">
+    <div class="batch-header">
+      <div>
+        <span class="eyebrow">Lote generado</span>
+        <h2>Placas multiples</h2>
+      </div>
+      <button id="clear-batch-btn" class="mini-btn" type="button">Limpiar</button>
+    </div>
+    <div class="batch-grid" id="batch-grid"></div>
+  </section>
+
+  <footer>
+    Generador educativo. Las imagenes son ficticias y no reemplazan documentos oficiales.
+  </footer>
+
+  <script src="plates.js"></script>
+</body>
+</html>
